@@ -10,6 +10,7 @@ by the application.
 from __future__ import annotations
 
 import os
+import sys
 
 import pytest
 
@@ -64,6 +65,24 @@ def test_multiple_cuda_dirs_can_be_given(tmp_path: Path, monkeypatch: pytest.Mon
     dirs = gpu.nvidia_runtime_dirs()
     assert first / "cublas" / "bin" in dirs
     assert second / "cublas" / "bin" in dirs
+
+
+def test_a_frozen_build_finds_both_cuda_folder_names(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The installer uses `_cuda`; the released archive unzips to `DoSubs-cuda`."""
+    for name in ("_cuda", "DoSubs-cuda"):
+        base = tmp_path / name
+        (base / "cublas" / "bin").mkdir(parents=True)
+        (base / "cublas" / "bin" / "cublas64_12.dll").write_bytes(b"stub")
+
+    monkeypatch.delenv("DOSUBS_CUDA_DIRS", raising=False)
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "DoSubs.exe"))
+
+    dirs = gpu.nvidia_runtime_dirs()
+    assert tmp_path / "_cuda" / "cublas" / "bin" in dirs
+    assert tmp_path / "DoSubs-cuda" / "cublas" / "bin" in dirs
 
 
 def test_resolve_device_prefers_cpu_when_asked() -> None:

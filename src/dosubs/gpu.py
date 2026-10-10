@@ -62,8 +62,10 @@ class AccelerationUnavailable(RuntimeError):
 def _extra_runtime_roots() -> list[Path]:
     """Locations that hold CUDA libraries outside ``sys.path``.
 
-    A packaged build cannot reach the site-packages wheel layout, so the CUDA
-    runtime is shipped as an optional ``_cuda`` folder next to the executable, and
+    A packaged build cannot reach the site-packages wheel layout, so the CUDA runtime
+    ships as a separate archive that the user drops next to the executable. Both the
+    ``_cuda`` folder name used by the installer and the ``DoSubs-cuda`` name the
+    release archive unzips to are accepted, so no renaming step is required.
     ``DOSUBS_CUDA_DIRS`` lets a user point at a system CUDA install instead.
     """
     roots: list[Path] = []
@@ -72,7 +74,8 @@ def _extra_runtime_roots() -> list[Path]:
         if entry.strip():
             roots.append(Path(entry.strip()))
     if getattr(sys, "frozen", False):
-        roots.append(Path(sys.executable).resolve().parent / "_cuda")
+        base = Path(sys.executable).resolve().parent
+        roots.extend((base / "_cuda", base / "DoSubs-cuda"))
     return roots
 
 
