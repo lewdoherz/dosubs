@@ -1,0 +1,6 @@
+# Keep the repository's text files in LF so the Python sources, packaging scripts and
+# documentation stay byte-identical across machines; only the Windows scripts keep CRLF.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.srt text eol=lf

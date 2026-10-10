@@ -1,0 +1,18 @@
+# Virtual environments and caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Packaging/installer metadata
+*.egg-info/
+
+# Build output
+build/
+dist/
+
+# Local scratch: sample media and generated subtitles used during development
+samples/
+out/
+*.original.srt
+*.bilingual.srt

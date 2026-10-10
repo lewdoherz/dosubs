@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dosubs"
+version = "0.1.0"
+description = "Windows video subtitle transcriber and translator: faster-whisper speech recognition plus configurable machine translation, exporting original, translated and bilingual SRT files."
+requires-python = ">=3.12"
+dependencies = [
+    "faster-whisper==1.2.1",
+    "ctranslate2==4.8.2",
+    # PyAV 19 removed the metadata_errors kwarg that faster-whisper 1.2.1 still
+    # passes to av.open(), so audio decoding fails without this pin.
+    "av==18.1.0",
+    "pysubs2==1.9.0",
+    "httpx==0.28.1",
+    "keyring==25.7.0",
+]
+
+[project.optional-dependencies]
+gui = ["PySide6==6.12.0"]
+cuda = ["nvidia-cublas-cu12>=12.9", "nvidia-cudnn-cu12>=9.25"]
+dev = ["pytest==9.1.1", "pytest-qt==4.5.0"]
+packaging = ["pyinstaller>=6.22"]
+
+[project.scripts]
+dosubs = "dosubs.cli:main"
+dosubs-gui = "dosubs.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+    "integration: exercises real media, models or network",
+]
