@@ -64,12 +64,27 @@ if ($IncludeCuda) {
 }
 
 if ($Installer) {
-    $iscc = Get-Command iscc.exe -ErrorAction SilentlyContinue
+    $iscc = $null
+    $command = Get-Command iscc.exe -ErrorAction SilentlyContinue
+    if ($command) { $iscc = $command.Source }
     if (-not $iscc) {
-        throw "Inno Setup (iscc.exe) was not found on PATH. Install it, or compile packaging\installer.iss manually."
+        # The winget package installs Inno Setup per-user, which is not on PATH.
+        foreach ($candidate in @(
+            "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe",
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+            "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+        )) {
+            if (Test-Path $candidate) { $iscc = $candidate; break }
+        }
     }
-    Write-Host "Compiling the installer ..." -ForegroundColor Cyan
-    & $iscc.FullName "/DAppVersion=$AppVersion" (Join-Path $root "packaging\installer.iss")
+    if (-not $iscc) {
+        throw "Inno Setup (ISCC.exe) was not found. Install it with: winget install --id JRSoftware.InnoSetup -e"
+    }
+
+    Write-Host "Compiling the installer with $iscc ..." -ForegroundColor Cyan
+    $defines = @("/DAppVersion=$AppVersion")
+    if ($IncludeCuda) { $defines += "/DIncludeCuda" }   # self-contained installer, ~1.3 GB output
+    & $iscc @defines (Join-Path $root "packaging\installer.iss")
     if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
     Write-Host "Installer written to $root\dist" -ForegroundColor Green
 }

@@ -3,6 +3,12 @@
 Windows desktop app that transcribes the spoken dialogue of video files, translates it
 (Simplified Chinese by default) and exports three synchronised subtitle files.
 
+**Download:** grab the latest packaged build from
+[Releases](https://github.com/lewdoherz/dosubs/releases) — unzip `DoSubs-<version>-windows-x64.zip`,
+optionally unzip the CUDA archive into `_cuda` next to `DoSubs.exe` for GPU transcription, and run
+`DoSubs.exe`. The rest of this file covers building from source, the command line, and how the
+pipeline works.
+
 For `ExampleVideo.mp4` it writes, next to the video or into a chosen folder:
 
 | File | Contents |
@@ -224,7 +230,7 @@ What the build produces:
 | --- | --- | --- |
 | `dist\DoSubs\` | 335 MB | the application: PySide6, faster-whisper, CTranslate2, PyAV, onnxruntime (Silero VAD), httpx, pysubs2, keyring. UPX is off; torch, whisperx, matplotlib, scipy and the unused Qt modules are excluded |
 | `dist\DoSubs-cuda\` | 2.0 GB | the optional NVIDIA CUDA runtime (cuBLAS, cuDNN, NVRTC) in the flat `<component>\bin` layout the app discovers |
-| `dist\DoSubs-<version>-setup.exe` | — | per-user installer (no admin prompt); it drops the CUDA payload into `{app}\_cuda` when the *NVIDIA CUDA runtime* component is selected |
+| `dist\DoSubs-<version>-setup.exe` | 90 MB | per-user installer (no admin prompt, Start Menu shortcut, uninstaller). By default it expects the CUDA component as a separate download; `-IncludeCuda -Installer` bundles it into one ~1.3 GB installer instead |
 
 Deliberately **not** bundled:
 
@@ -252,6 +258,22 @@ Verified on this machine, with the real bundle:
 | `DoSubs.exe --selfcheck` | reports the bundled interpreter, the config/log paths and the ffmpeg on `PATH` |
 | `--selfcheck --deep`, no CUDA component | detection reports the GPU, the first attempt fails with `Library cublas64_12.dll is not found or cannot be loaded`, the run **degrades to the CPU automatically** and completes (1 s of audio took 3.43 s) |
 | `--selfcheck --deep`, with `_cuda` next to the executable | CUDA runtime registered, model loaded, inference on `cuda/float16` (1 s of audio took 0.24 s) |
+| `DoSubs-0.1.0-setup.exe /VERYSILENT` | installs into `%LOCALAPPDATA%\Programs\DoSubs` with no admin prompt; the installed copy's `--selfcheck` exits 0 and reports its installed path; `/VERYSILENT` uninstall exits 0 and removes the folder |
+
+Note when scripting the packaged app: it is a windowed executable, so PowerShell's `&` returns
+before it finishes — use `Start-Process -Wait` (or run it from a shell that waits) when the exit code
+or its side effect matters.
+
+### Publishing a release
+
+1. Tag and push: `git tag -a v0.1.0 -m "DoSubs 0.1.0"` then `git push origin v0.1.0`.
+2. Create a GitHub release for the tag (or let the API create the tag from `main`) and attach:
+   `DoSubs-<version>-setup.exe`, `DoSubs-<version>-windows-x64.zip`,
+   `DoSubs-cuda-<version>-windows-x64.zip` and a generated `SHA256SUMS.txt`.
+   Release assets must each stay under 2 GiB — the CUDA archive is 1.28 GB, which is why it is a
+   separate asset instead of being folded into the installer.
+3. Use the release body as the end-user quick start: what each asset is, the `_cuda` step, the
+   FFmpeg requirement, the provider key, and how to verify the machine with `--selfcheck --deep`.
 
 Two packaging traps are handled in the spec and worth keeping in mind when editing it: the frozen
 entry point must import the package rather than run a module as a script, and faster-whisper's
@@ -281,9 +303,9 @@ Known gaps:
 - The DeepSeek API path is implemented against the documented contract and verified against a stub
   server over real HTTP; it has not been exercised with a live API key from this repository. Run
   `dosubs --test-provider` once a key is stored to confirm it.
-- The packaged build is verified for startup and for model loading plus inference on both the GPU
-  and the CPU fallback path (`--selfcheck --deep`, see *Packaging*). A full multi-file GUI run
-  inside the frozen bundle has not been performed; the pipeline itself is verified from the
-  virtual environment.
+- The packaged build is verified for startup, for model loading plus inference on both the GPU and
+  the CPU fallback path, and for install/uninstall (`--selfcheck --deep`, see *Packaging*). A full
+  multi-file GUI run inside the frozen bundle has not been performed; the pipeline itself is
+  verified from the virtual environment.
 - Faster-whisper's Silero VAD model is loaded from package data. Inside the frozen build it lives
   in `_internal\faster_whisper\assets`, which the spec collects explicitly.

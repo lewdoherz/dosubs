@@ -1,14 +1,16 @@
 ; Inno Setup script for DoSubs.
 ;
-;   packaging\build.ps1 -IncludeCuda -Installer
-; or manually:
 ;   iscc /DAppVersion=0.1.0 packaging\installer.iss
+;   iscc /DAppVersion=0.1.0 /DIncludeCuda packaging\installer.iss   ; bundle the 2 GB CUDA runtime
 ;
-; Per-user install (no administrator prompt). The CUDA runtime is a separate optional
-; component: it is about 2 GB unpacked, and a machine without an NVIDIA GPU never
-; needs it. Speech models are not shipped; they download on first use. User data
-; (models, cache, logs, config) lives in %LOCALAPPDATA%\DoSubs and %APPDATA%\DoSubs
-; and is deliberately left in place on uninstall.
+; The CUDA runtime is compile-time optional because compressing ~2 GB of NVIDIA DLLs into the
+; installer takes a very long time; the default build expects users to unzip
+; DoSubs-cuda-<version>-windows-x64.zip into "_cuda" next to DoSubs.exe (the app discovers it).
+; Pass /DIncludeCuda to produce a single self-contained installer instead.
+;
+; Per-user install (no administrator prompt). Speech models are not shipped; they download on
+; first use. User data (models, cache, logs, config) lives in %LOCALAPPDATA%\DoSubs and
+; %APPDATA%\DoSubs and is deliberately left in place on uninstall.
 
 #ifndef AppVersion
   #define AppVersion "0.1.0"
@@ -38,23 +40,31 @@ UninstallDisplayIcon={app}\{#AppExeName}
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
-Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
+; Chinese Simplified is not one of the 29 translations Inno Setup ships. To use it, download
+; ChineseSimplified.isl from the Inno Setup translations repository into the compiler's
+; Languages folder and add:  Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
 
 [Types]
-Name: "full"; Description: "Application and CPU support"
+Name: "full"; Description: "Application (CPU transcription, GPU optional later)"
+#ifdef IncludeCuda
 Name: "gpu"; Description: "Application with NVIDIA CUDA acceleration (adds about 2 GB)"
+#endif
 Name: "custom"; Description: "Custom installation"; Flags: iscustom
 
 [Components]
-Name: "app"; Description: "DoSubs application"; Types: full gpu custom; Flags: fixed
-Name: "cuda"; Description: "NVIDIA CUDA runtime (needed for GPU transcription)"; Types: gpu
+Name: "app"; Description: "DoSubs application"; Types: full custom; Flags: fixed
+#ifdef IncludeCuda
+Name: "cuda"; Description: "NVIDIA CUDA runtime (needed for GPU transcription)"; Types: full gpu custom
+#endif
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"
 
 [Files]
 Source: "..\dist\DoSubs\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: app
+#ifdef IncludeCuda
 Source: "..\dist\DoSubs-cuda\*"; DestDir: "{app}\_cuda"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: cuda
+#endif
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
