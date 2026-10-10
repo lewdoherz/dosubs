@@ -235,8 +235,9 @@ What the build produces:
 Deliberately **not** bundled:
 
 - **The CUDA runtime, by default.** It is 2 GB unpacked (a single cuDNN DLL is 517 MB) and a
-  machine without an NVIDIA GPU never needs it. Installed as a component, the app finds it next to
-  the executable; `DOSUBS_CUDA_DIRS` can point at another location instead.
+  machine without an NVIDIA GPU never needs it. The app looks for it next to the executable under
+  either name — `_cuda` (what the installer component uses) or `DoSubs-cuda` (what the release
+  archive unpacks to) — and `DOSUBS_CUDA_DIRS` can point at another location instead.
 - **Speech models.** They download on first use into the Hugging Face cache, so recognition works
   offline afterwards and the installer stays small.
 - **FFmpeg.** Found on `PATH` or in `%LOCALAPPDATA%\DoSubs\bin`; only used for probing media.
